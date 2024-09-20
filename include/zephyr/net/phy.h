@@ -23,6 +23,7 @@
  */
 #include <zephyr/types.h>
 #include <zephyr/device.h>
+#include <errno.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -118,6 +119,14 @@ __subsystem struct ethphy_driver_api {
 	/** Write PHY register */
 	int (*write)(const struct device *dev, uint16_t reg_addr,
 		     uint32_t data);
+
+	/** Read PHY device register */
+	int (*read_device)(const struct device *dev, uint8_t dev_addr, uint16_t reg_addr,
+			   uint16_t *data);
+
+	/** Write PHY device register */
+	int (*write_device)(const struct device *dev, uint8_t dev_addr, uint16_t reg_addr,
+			    uint16_t data);
 };
 /**
  * @endcond
@@ -232,6 +241,67 @@ static inline int phy_write(const struct device *dev, uint16_t reg_addr,
 	return api->write(dev, reg_addr, value);
 }
 
+/**
+ * @brief      Read PHY registers
+ *
+ * This routine provides a generic interface to read from a PHY register.
+ *
+ * @param[in]  dev       PHY device structure
+ * @param[in]  dev_addr  MMD device address
+ * @param[in]  reg_addr  Register address
+ * @param      value     Pointer to receive read value
+ *
+ * @retval 0 If successful.
+ * @retval -EIO If communication with PHY failed.
+ * @retval -ENOSYS if the interface is not implemented.
+ * @retval -EINVAL invalid device or register address.
+ */
+static inline int phy_read_device(const struct device *dev, uint8_t dev_addr, uint16_t reg_addr,
+				  uint16_t *value)
+{
+	const struct ethphy_driver_api *api = (const struct ethphy_driver_api *)dev->api;
+
+	if (api->read_device == NULL) {
+		return -ENOSYS;
+	}
+
+	if (dev_addr > 0x1F) {
+		return -EINVAL;
+	}
+
+	return api->read_device(dev, dev_addr, reg_addr, value);
+}
+
+/**
+ * @brief      Write PHY register
+ *
+ * This routine provides a generic interface to write to a PHY register.
+ *
+ * @param[in]  dev       PHY device structure
+ * @param[in]  dev_addr  MMD device address
+ * @param[in]  reg_addr  Register address
+ * @param[in]  value     Value to write
+ *
+ * @retval 0 If successful.
+ * @retval -EIO If communication with PHY failed.
+ * @retval -ENOSYS if the interface is not implemented.
+ * @retval -EINVAL invalid device or register address.
+ */
+static inline int phy_write_device(const struct device *dev, uint8_t dev_addr, uint16_t reg_addr,
+				   uint16_t value)
+{
+	const struct ethphy_driver_api *api = (const struct ethphy_driver_api *)dev->api;
+
+	if (api->write_device == NULL) {
+		return -ENOSYS;
+	}
+
+	if (dev_addr > 0x1F) {
+		return -EINVAL;
+	}
+
+	return api->write_device(dev, dev_addr, reg_addr, value);
+}
 
 #ifdef __cplusplus
 }
